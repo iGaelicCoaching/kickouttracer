@@ -1,0 +1,898 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="manifest" href="manifest.webmanifest"><meta name="theme-color" content="#0b2426"><link rel="icon" href="icon-192.png"><title>KickoutArc</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+/* Layout: ShotArc-style tagging bench — form rail on the left, a full GAA pitch on the right (kicking goal at the bottom), live tallies under it. Single deliberate dark theme, iGaelicCoach ink/teal/gold. */
+:root{
+  --ink:#0b2426; --panel:#123437; --panel-2:#183f42; --line:#25504f;
+  --fg:#e9f1f0; --muted:#9fb6b4; --teal:#1e8f8a; --teal-lt:#3fb3a6; --gold:#e2b153;
+  --won:#3fbf6f; --lost:#e0563f; --amber:#e8963c;
+  --grass:#2f6b3a; --grass-2:#2a6234; --chalk:rgba(255,255,255,.85);
+  --font:'Poppins',system-ui,-apple-system,'Segoe UI',sans-serif;
+  --mono:'JetBrains Mono',ui-monospace,'SFMono-Regular',Menlo,monospace;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--ink);color:var(--fg)}
+body{font-family:var(--font);font-size:14px;line-height:1.45;margin:0}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--gold);outline-offset:2px}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:0 32px;max-width:1440px;margin:0 auto}
+
+/* header */
+header.bar{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--ink);border-bottom:3px solid var(--teal);
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:10px}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:30;background:var(--ink)}
+.bar-in{max-width:1440px;margin:0 auto;display:flex;flex-wrap:wrap;gap:10px 18px;align-items:center}
+.brand{display:flex;align-items:center;gap:10px;margin-right:auto}
+.brand img{height:30px}
+.brand b{font-size:1.15rem;font-weight:700;letter-spacing:-.01em}
+.brand b span{color:var(--teal-lt)}
+.brand small{color:var(--muted);font-size:.78rem;border-left:1px solid var(--line);padding-left:10px}
+.game-pick{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+select,input[type=text],input[type=number],input[type=date],textarea{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:7px 10px;min-width:0}
+textarea{width:100%;resize:vertical;min-height:38px}
+.btn{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:7px 12px;cursor:pointer;font-weight:500;white-space:nowrap}
+.btn:hover{border-color:var(--teal-lt)}
+.btn.primary{background:var(--gold);color:var(--ink);border-color:var(--gold);font-weight:700}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.teal{background:var(--teal);border-color:var(--teal)}
+.btn.danger{background:transparent;border-color:var(--lost);color:#ffb3a6}
+.btn:disabled{opacity:.45;cursor:not-allowed}
+
+nav.tabs{display:flex;gap:4px;margin:14px 0 12px;border-bottom:1px solid var(--line);overflow-x:auto}
+nav.tabs button{background:none;border:0;border-bottom:3px solid transparent;padding:8px 14px;cursor:pointer;color:var(--muted);font-weight:600}
+nav.tabs button[aria-selected=true]{color:var(--fg);border-bottom-color:var(--gold)}
+.banner{background:#3a2a10;border:1px solid var(--gold);color:#f6dca7;border-radius:6px;padding:8px 12px;margin-top:12px;font-size:.85rem}
+
+/* tag view */
+.tag{display:grid;grid-template-columns:minmax(300px,400px) minmax(0,1fr);gap:18px;align-items:start}
+@media (max-width:900px){.tag{grid-template-columns:1fr}}
+.rail{background:var(--panel);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:14px}
+.rail h2{margin:0;font-size:1.25rem}
+.field{display:flex;flex-direction:column;gap:6px;min-width:0}
+.field>label,.lab{font-weight:600;font-size:.82rem;color:var(--muted);text-transform:uppercase;letter-spacing:.05em;display:flex;justify-content:space-between;gap:6px}
+.row2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.seg{display:flex;flex-wrap:wrap;gap:6px}
+.seg button{flex:1 1 auto;background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:7px 8px;cursor:pointer;font-weight:500;min-width:44px}
+.seg button[aria-pressed=true]{background:var(--teal);border-color:var(--teal-lt);color:#fff}
+.seg.outcome button[data-v=Won][aria-pressed=true]{background:var(--won);border-color:var(--won);color:#06240f}
+.seg.outcome button[data-v=Lost][aria-pressed=true]{background:var(--lost);border-color:var(--lost);color:#2a0903}
+kbd{font-family:var(--mono);font-size:.68rem;background:rgba(255,255,255,.08);border:1px solid var(--line);border-radius:3px;padding:0 4px;color:var(--muted);margin-left:4px}
+details{border-top:1px solid var(--line);padding-top:10px}
+summary{cursor:pointer;font-weight:600;color:var(--muted)}
+details .more{display:flex;flex-direction:column;gap:12px;margin-top:12px}
+.readout{font-family:var(--mono);font-size:.82rem;color:var(--gold);min-height:1.2em}
+.hint{color:var(--muted);font-size:.78rem}
+.actions{display:flex;gap:8px}
+.actions .btn{flex:1}
+.err{color:#ffb3a6;font-size:.82rem;min-height:1em}
+.steppers{display:grid;grid-template-columns:1fr 1fr auto;gap:10px;align-items:end}
+.stepper{display:flex;flex-direction:column;gap:4px;min-width:0}
+.stepper .sl{font-size:.74rem;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stepper .ctl{display:flex;align-items:center;background:var(--panel-2);border:1px solid var(--line);border-radius:6px}
+.stepper .ctl button{background:none;border:0;width:36px;height:36px;font-size:1.2rem;font-weight:700;cursor:pointer;color:var(--fg)}
+.stepper .ctl button:hover{color:var(--gold)}
+.stepper .ctl output{flex:1;text-align:center;font-weight:700;font-size:1.1rem;font-variant-numeric:tabular-nums}
+.diff{min-width:58px;height:36px;border-radius:6px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:1.05rem;background:var(--panel-2);color:var(--muted)}
+.diff.p{background:var(--won);color:#06240f}.diff.m{background:var(--lost);color:#2a0903}.diff.e{background:var(--amber);color:#2b1503}
+.windchip{display:inline-flex;gap:6px;align-items:center;font-size:.8rem;color:var(--muted)}
+.windchip b{color:var(--fg)}
+.btn.primary kbd{background:rgba(11,36,38,.15);border-color:rgba(11,36,38,.35);color:var(--ink)}
+@media (max-width:900px){.pitchcard{order:-1}.tag kbd{display:none}}
+
+.pitchcard{background:var(--panel);border-radius:10px;padding:12px;display:flex;flex-direction:column;gap:8px;min-width:0}
+.pitchhead{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap}
+.pitchhead b{font-size:.95rem}
+.pitchwrap{display:flex;justify-content:center}
+svg.pitch{width:100%;max-width:520px;height:auto;display:block;cursor:crosshair;border-radius:6px;touch-action:manipulation}
+.legend{display:flex;gap:14px;flex-wrap:wrap;font-size:.78rem;color:var(--muted)}
+.dot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px;vertical-align:-1px;border:1px solid rgba(0,0,0,.4)}
+
+/* tallies */
+.tallies{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px;margin-top:14px}
+@media (max-width:640px){.tallies{grid-template-columns:1fr}}
+.tally{background:var(--panel);border-radius:10px;padding:12px 14px;min-width:0}
+.tally h3{margin:0 0 8px;font-size:.95rem;display:flex;justify-content:space-between;gap:8px}
+.statgrid{display:grid;grid-template-columns:auto 1fr auto;gap:6px 10px;align-items:center;font-variant-numeric:tabular-nums}
+.pill{font-weight:700;border-radius:4px;padding:1px 8px;text-align:center;min-width:52px;font-size:.85rem}
+.pill.g{background:var(--won);color:#06240f}.pill.a{background:var(--amber);color:#2b1503}.pill.r{background:var(--lost);color:#2a0903}.pill.n{background:var(--panel-2);color:var(--muted)}
+
+/* list */
+.tablewrap{overflow-x:auto;background:var(--panel);border-radius:10px}
+table{border-collapse:collapse;width:100%;font-variant-numeric:tabular-nums;font-size:.85rem}
+th,td{padding:7px 10px;text-align:left;border-bottom:1px solid var(--line);white-space:nowrap}
+th{position:sticky;top:0;background:var(--panel-2);font-size:.75rem;text-transform:uppercase;letter-spacing:.05em;color:var(--muted)}
+tr.editing td{background:rgba(226,177,83,.12)}
+td .w{color:var(--won);font-weight:700}td .l{color:var(--lost);font-weight:700}
+.iconbtn{background:none;border:1px solid var(--line);border-radius:4px;padding:2px 8px;cursor:pointer;color:var(--muted)}
+.iconbtn:hover{color:var(--fg);border-color:var(--teal-lt)}
+
+/* maps view */
+.filters{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:12px}
+.maps{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px}
+@media (max-width:900px){.maps{grid-template-columns:1fr}}
+.mapcard{background:var(--panel);border-radius:10px;padding:14px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px;min-width:0;align-content:start;align-items:start}
+@media (max-width:560px){.mapcard{grid-template-columns:1fr}}
+.mapcard h3{grid-column:1/-1;margin:0;font-size:1.05rem;background:var(--ink);border-left:4px solid var(--gold);padding:6px 10px;border-radius:4px}
+.mapcard svg{width:100%;height:auto;cursor:default}
+.ztable td,.ztable th{padding:5px 8px}
+.big{font-size:2rem;font-weight:700;line-height:1}
+
+/* modal (in-page, no browser dialogs) */
+.scrim{position:fixed;inset:0;background:rgba(3,12,13,.7);display:flex;align-items:center;justify-content:center;z-index:50;padding:16px}
+.modal{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:18px;width:min(520px,100%);display:flex;flex-direction:column;gap:12px;max-height:90vh;overflow:auto}
+.modal h3{margin:0}
+.toast{position:fixed;left:50%;transform:translateX(-50%);bottom:calc(18px + env(safe-area-inset-bottom,0px));background:var(--gold);color:var(--ink);font-weight:700;padding:8px 16px;border-radius:999px;z-index:60}
+.empty{background:var(--panel);border:1px dashed var(--line);border-radius:10px;padding:28px;text-align:center;color:var(--muted)}
+.empty b{color:var(--fg)}
+.gtool{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between;margin-bottom:12px}
+.gtool-r{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.gtool-r input[type=search]{min-width:220px}
+.gtable td,.gtable th{white-space:nowrap}.gtable .c{text-align:center}
+.gtable tbody tr{cursor:pointer}.gtable tbody tr:hover td{background:rgba(226,177,83,.08)}
+.gtable tr.cur td{background:rgba(63,179,166,.12)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+
+<header class="bar">
+  <div class="bar-in">
+    <div class="brand"><img alt="" src="data:image/png;base64,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"><b>Kickout<span>Arc</span></b><small>iGaelicCoach kickout tagging</small></div>
+    <div class="game-pick">
+      <label for="gameSel" class="hint">Game</label>
+      <select id="gameSel"><option value="">No games yet</option></select>
+      <button class="btn teal" id="newGameBtn" type="button">+ New game</button>
+      <button class="btn" id="exportBtn" type="button">Export CSV</button>
+      <button class="btn" id="importBtn" type="button">Import CSV</button>
+      <input type="file" id="importFile" accept=".csv,text/csv" hidden>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+  <div id="banner" class="banner" hidden></div>
+  <nav class="tabs" role="tablist">
+    <button role="tab" id="tab-games" aria-selected="false" data-view="games">Games</button>
+    <button role="tab" id="tab-tag" aria-selected="true" data-view="tag">Tag kickouts</button>
+    <button role="tab" id="tab-maps" aria-selected="false" data-view="maps">Maps &amp; stats</button>
+    <button role="tab" id="tab-list" aria-selected="false" data-view="list">Kickout list</button>
+  </nav>
+
+  <!-- GAMES -->
+  <section id="view-games" hidden>
+    <div class="gtool">
+      <h2 style="margin:0">Games</h2>
+      <div class="gtool-r">
+        <input type="search" id="gSearch" placeholder="Search team or competition" aria-label="Search games">
+        <button class="btn primary" id="gAdd" type="button">+ Add game</button>
+        <button class="btn" id="gBackup" type="button">Backup</button>
+        <button class="btn" id="gRestore" type="button">Restore</button>
+        <input type="file" id="gRestoreFile" accept=".json,application/json" hidden>
+      </div>
+    </div>
+    <div class="tablewrap"><table class="gtable"><thead><tr>
+      <th>Date</th><th>Competition</th><th>Home</th><th class="c">Kickouts</th><th class="c">Kept</th><th>Away</th><th class="c">Kept</th><th></th></tr></thead>
+      <tbody id="gBody"></tbody></table></div>
+    <p class="hint" id="gNote">Games are saved in this browser on this computer. Use <b>Backup</b> now and then (and before clearing browser data or changing computer); <b>Restore</b> brings a backup back on any computer.</p>
+  </section>
+
+  <!-- TAG -->
+  <section id="view-tag">
+    <div id="noGame" class="empty" hidden><p><b>Start with a game.</b> Click <b>+ New game</b>, enter the two teams, then click on the pitch where each kickout lands.</p></div>
+    <div class="tag" id="tagMain">
+      <form class="rail" id="koForm" autocomplete="off">
+        <h2 id="formTitle">Add kickout</h2>
+        <div class="field"><span class="lab">Kicking team <kbd>T</kbd></span><div class="seg" id="segTeam"></div></div>
+        <div class="row2">
+          <div class="field"><span class="lab">Half <kbd>1-3</kbd></span><div class="seg" id="segHalf">
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">ET</button></div></div>
+          <div class="field"><label for="vtime">Video time</label><input type="text" id="vtime" placeholder="HH:MM:SS" inputmode="numeric"></div>
+        </div>
+        <div class="field"><span class="lab">Where it was won</span>
+          <div class="readout" id="readout">Click the pitch where the ball was won</div></div>
+        <div class="field"><span class="lab">Length <span><kbd>S</kbd><kbd>M</kbd><kbd>L</kbd></span></span><div class="seg" id="segLen">
+          <button type="button" data-v="Short">Short</button><button type="button" data-v="Medium">Medium</button><button type="button" data-v="Long">Long</button></div></div>
+        <div class="field"><span class="lab">How it was won <span><kbd>C</kbd><kbd>B</kbd><kbd>X</kbd><kbd>F</kbd></span></span><div class="seg" id="segContest">
+          <button type="button" data-v="Clean">Clean catch</button><button type="button" data-v="Break">Contested break</button><button type="button" data-v="Sideline">Sideline</button><button type="button" data-v="Free">Free</button></div></div>
+        <div class="field"><span class="lab">Outcome for kicking team <span><kbd>Y</kbd><kbd>N</kbd></span></span><div class="seg outcome" id="segOut">
+          <button type="button" data-v="Won">Won</button><button type="button" data-v="Lost">Lost</button></div></div>
+        <div class="field"><label for="wonBy">Won by (player)</label><input type="text" id="wonBy" list="playerList" placeholder="e.g. Ryan O'Donoghue"><datalist id="playerList"></datalist></div>
+        <div class="field"><span class="lab">Numbers at the drop zone</span>
+          <div class="steppers">
+            <div class="stepper"><span class="sl" id="nKickLab">Kicking team</span><div class="ctl"><button type="button" data-step="nKick" data-d="-1" aria-label="One fewer">&minus;</button><output id="nKick">–</output><button type="button" data-step="nKick" data-d="1" aria-label="One more">+</button></div></div>
+            <div class="stepper"><span class="sl" id="nOppLab">Opposition</span><div class="ctl"><button type="button" data-step="nOpp" data-d="-1" aria-label="One fewer">&minus;</button><output id="nOpp">–</output><button type="button" data-step="nOpp" data-d="1" aria-label="One more">+</button></div></div>
+            <div class="stepper"><span class="sl">+/&minus;</span><div class="diff" id="nDiff">–</div></div>
+          </div></div>
+        <div class="field"><span class="lab">Opposition press <span class="hint" style="text-transform:none;letter-spacing:0">stays set until you change it</span></span><div class="seg" id="segPress">
+          <button type="button" data-v="Man-to-man">Man-to-man</button><button type="button" data-v="Zonal">Zonal</button><button type="button" data-v="Dropped off">Dropped off</button></div></div>
+        <div class="field" id="formField" hidden><span class="lab">Zonal shape</span><div class="seg" id="segShape">
+          <button type="button" data-v="4-4-3">4-4-3</button><button type="button" data-v="3-4-4">3-4-4</button><button type="button" data-v="4-3-4">4-3-4</button><button type="button" data-v="3-5-3">3-5-3</button><button type="button" data-v="5-3-3">5-3-3</button><button type="button" data-v="other">Other</button></div>
+          <input type="text" id="shapeOther" placeholder="e.g. 2-5-4" hidden></div>
+        <div class="field"><span class="lab">Wind for this kickout</span><div class="seg" id="segWind">
+          <button type="button" data-v="With">With</button><button type="button" data-v="Into">Into</button><button type="button" data-v="Across">Across</button><button type="button" data-v="Calm">Calm</button></div>
+          <span class="hint" id="windHint">Set the wind on the game (Edit this game) and this fills in itself.</span></div>
+        <details id="moreBox"><summary>More detail (optional)</summary><div class="more">
+          <div class="field"><span class="lab">Kickout came after</span><div class="seg" id="segAfter">
+            <button type="button" data-v="Score">Score</button><button type="button" data-v="Wide">Wide</button><button type="button" data-v="Other">Other</button></div></div>
+          <div class="field"><label for="speed">Restart speed (seconds from the score or wide)</label><input type="number" id="speed" min="0" max="120" placeholder="e.g. 8"></div>
+          <div class="field"><span class="lab">What the winning team did with it</span><div class="seg" id="segResult">
+            <button type="button" data-v="Score">Score</button><button type="button" data-v="Shot missed">Shot missed</button><button type="button" data-v="Turnover">Turnover</button></div></div>
+          <div class="field" id="ptsField" hidden><span class="lab">Points scored</span><div class="seg" id="segPts">
+            <button type="button" data-v="1">1</button><button type="button" data-v="2">2</button><button type="button" data-v="3">Goal</button></div></div>
+          <div class="field"><label for="notes">Notes</label><textarea id="notes" rows="2"></textarea></div>
+        </div></details>
+        <div class="err" id="formErr" role="alert"></div>
+        <div class="actions">
+          <button type="button" class="btn" id="clearBtn">Clear <kbd>Esc</kbd></button>
+          <button type="submit" class="btn primary" id="saveBtn">Add kickout <kbd>Enter</kbd></button>
+        </div>
+        <p class="hint" style="margin:0">Draw every kickout as if the kicking goalkeeper is at the <b>bottom</b> goal, facing up the pitch. Length is set from where it's won (Short up to <span id="shortLineTxt">45</span>m, Medium to <span id="medLineTxt">65</span>m, Long beyond); change it if needed.</p>
+      </form>
+
+      <div class="pitchcard">
+        <div class="pitchhead"><b id="pitchTitle">Kickouts</b>
+          <div class="legend"><span><i class="dot" style="background:var(--won)"></i>Won</span><span><i class="dot" style="background:var(--lost)"></i>Lost</span><span><i class="dot" style="background:var(--gold)"></i>This kickout</span></div></div>
+        <div class="pitchwrap"><svg class="pitch" id="tagPitch" viewBox="-4 -4 93 148" role="img" aria-label="Pitch: click where the kickout landed"></svg></div>
+      </div>
+    </div>
+    <div class="tallies" id="tallies"></div>
+  </section>
+
+  <!-- MAPS -->
+  <section id="view-maps" hidden>
+    <div class="filters">
+      <label class="hint" for="fHalf">Half</label><select id="fHalf"><option value="">All</option><option value="1">1st</option><option value="2">2nd</option><option value="3">Extra time</option></select>
+      <label class="hint" for="fLen">Length</label><select id="fLen"><option value="">All</option><option>Short</option><option>Medium</option><option>Long</option></select>
+      <label class="hint" for="fCon">How won</label><select id="fCon"><option value="">All</option><option value="Clean">Clean catch</option><option value="Break">Contested break</option><option>Sideline</option><option>Free</option></select>
+      <label class="hint" for="fPress">Press</label><select id="fPress"><option value="">All</option><option>Man-to-man</option><option>Zonal</option><option>Dropped off</option></select>
+      <label class="hint" for="fWind">Wind</label><select id="fWind"><option value="">All</option><option>With</option><option>Into</option><option>Across</option><option>Calm</option></select>
+      <label class="hint" for="fPlayer">Won by</label><select id="fPlayer"><option value="">All players</option></select>
+      <label class="hint" for="fScope">Games</label><select id="fScope"><option value="game">This game</option><option value="all">All games (by team)</option></select>
+    </div>
+    <div class="maps" id="maps"></div>
+  </section>
+
+  <!-- LIST -->
+  <section id="view-list" hidden>
+    <div class="tablewrap"><table><thead><tr>
+      <th>#</th><th>Team</th><th>Half</th><th>Time</th><th>Length</th><th>How won</th><th>Outcome</th><th>Won by</th><th>Zone</th><th>Dist</th><th>Numbers</th><th>Press</th><th>Wind</th><th>Result</th><th></th></tr></thead>
+      <tbody id="listBody"></tbody></table></div>
+  </section>
+</div>
+
+<div id="modalRoot"></div>
+<div id="toast" class="toast" hidden></div>
+
+<script>
+(() => {
+"use strict";
+/* ---------- pitch geometry (metres; kicking goal line at y=0, left touchline x=0) ---------- */
+const W = 85, L = 140, CX = W / 2;
+const LS_KEY = "kickoutarc.prefs";
+let prefs = { shortLine: 45, medLine: 65 };
+try { Object.assign(prefs, JSON.parse(localStorage.getItem(LS_KEY) || "{}")); } catch (e) {}
+document.getElementById("shortLineTxt").textContent = prefs.shortLine;
+document.getElementById("medLineTxt").textContent = prefs.medLine;
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+function pitchSVG(svg) {
+  const ns = "http://www.w3.org/2000/svg";
+  svg.innerHTML = "";
+  const g = document.createElementNS(ns, "g");
+  g.setAttribute("transform", `translate(0 ${L}) scale(1 -1)`);   // y up, kicking goal at bottom
+  const ch = 'stroke="rgba(255,255,255,.85)" stroke-width=".45" fill="none"';
+  let s = `<rect x="-4" y="-4" width="93" height="148" fill="#2a6234"/>`;
+  for (let i = 0; i < 14; i++) s += `<rect x="0" y="${i * 10}" width="${W}" height="10" fill="${i % 2 ? "#2f6b3a" : "#2c6636"}"/>`;
+  s += `<rect x="0" y="0" width="${W}" height="${L}" ${ch}/>`;
+  [13, 20, 45, 65, 70, 75, 95, 120, 127].forEach(y => s += `<line x1="0" x2="${W}" y1="${y}" y2="${y}" ${ch} ${y === 70 ? 'stroke-dasharray="1.6 1.2"' : ""}/>`);
+  const ends = [[0, 1], [L, -1]];
+  ends.forEach(([y0, d]) => {
+    s += `<rect x="${CX - 9.5}" y="${d > 0 ? y0 : y0 - 13}" width="19" height="13" ${ch}/>`;
+    s += `<rect x="${CX - 7}" y="${d > 0 ? y0 : y0 - 4.5}" width="14" height="4.5" ${ch}/>`;
+    const arc = [], dee = [];
+    for (let a = 0; a <= 180; a += 3) {
+      const r = a * Math.PI / 180;
+      const ax = CX + 40 * Math.cos(r), ay = y0 + d * 40 * Math.sin(r);
+      if (ax >= 0 && ax <= W) arc.push(`${ax.toFixed(2)},${ay.toFixed(2)}`);
+      dee.push(`${(CX + 13 * Math.cos(r)).toFixed(2)},${(y0 + d * (20 + 13 * Math.sin(r))).toFixed(2)}`);
+    }
+    s += `<polyline points="${arc.join(" ")}" ${ch}/><polyline points="${dee.join(" ")}" ${ch}/>`;
+    s += `<line x1="${CX - 3.25}" x2="${CX + 3.25}" y1="${y0}" y2="${y0}" stroke="${d > 0 ? "#e2b153" : "rgba(255,255,255,.9)"}" stroke-width="1.4"/>`;
+  });
+  g.innerHTML = s;
+  const dots = document.createElementNS(ns, "g"); dots.setAttribute("class", "dots");
+  g.appendChild(dots);
+  svg.appendChild(g);
+  // labels (not flipped)
+  const lab = document.createElementNS(ns, "g");
+  lab.innerHTML = [["13", 13], ["20", 20], ["45", 45], ["65", 65]].map(([t, y]) =>
+    `<text x="${W + 1}" y="${L - y + 1}" font-size="2.6" fill="rgba(255,255,255,.55)" font-family="Poppins,sans-serif">${t}</text>`).join("")
+    + `<text x="${CX}" y="${L + 3.2}" font-size="2.6" text-anchor="middle" fill="#e2b153" font-family="Poppins,sans-serif">kicking goal</text>`;
+  svg.appendChild(lab);
+  return { g, dots };
+}
+
+function geo(x, y) {
+  const dist = Math.hypot(x - CX, y);
+  const band = y < 45 ? "Up to 45m" : y < 65 ? "45–65m" : y < 70 ? "65m–half" : "Opp half";
+  const side = x < W / 3 ? "Left" : x > 2 * W / 3 ? "Right" : "Centre";
+  return { dist: Math.round(dist * 10) / 10, band, side, zone: `${band} · ${side}` };
+}
+
+/* ---------- store: db capability, with an in-browser fallback ---------- */
+let store = null, isLocal = false, dbErrShown = false;
+const IDB = {
+  db: null,
+  open() { return new Promise((res, rej) => { const r = indexedDB.open("kickoutarc", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("kv"); r.onsuccess = () => res(this.db = r.result); r.onerror = () => rej(r.error); }); },
+  get(k) { return new Promise((res, rej) => { const q = this.db.transaction("kv").objectStore("kv").get(k); q.onsuccess = () => res(q.result); q.onerror = () => rej(q.error); }); },
+  set(k, v) { return new Promise((res, rej) => { const tx = this.db.transaction("kv", "readwrite"); tx.objectStore("kv").put(v, k);
+    tx.oncomplete = () => res(); tx.onerror = () => rej(tx.error); }); },
+};
+const local = (() => {
+  let data = { games: {}, kicks: {} }, useIdb = false, saveErr = false;
+  const save = () => {
+    const done = () => { if (saveErr) { saveErr = false; showBanner(""); } };
+    const fail = () => { saveErr = true; showBanner("Couldn't save to this browser's storage. Use Backup now so nothing is lost."); };
+    if (useIdb) IDB.set("data", data).then(done, () => { try { localStorage.setItem("kickoutarc.local", JSON.stringify(data)); done(); } catch (e) { fail(); } });
+    else { try { localStorage.setItem("kickoutarc.local", JSON.stringify(data)); done(); } catch (e) { fail(); } }
+  };
+  const subs = { games: new Set(), kicks: new Map() };
+  const fire = () => { subs.games.forEach(f => f(Object.values(data.games)));
+    subs.kicks.forEach((set, gid) => set.forEach(f => f(Object.values(data.kicks[gid] || {})))); };
+  return {
+    watchGames(cb) { subs.games.add(cb); cb(Object.values(data.games)); return () => subs.games.delete(cb); },
+    watchKicks(gid, cb) { if (!subs.kicks.has(gid)) subs.kicks.set(gid, new Set()); subs.kicks.get(gid).add(cb);
+      cb(Object.values(data.kicks[gid] || {})); return () => subs.kicks.get(gid).delete(cb); },
+    async saveGame(g) { data.games[g.id] = g; save(); fire(); },
+    async saveKick(gid, k) { (data.kicks[gid] ||= {})[k.id] = k; save(); fire(); },
+    async deleteKick(gid, id) { delete (data.kicks[gid] || {})[id]; save(); fire(); },
+    async deleteGame(gid) { delete data.games[gid]; delete data.kicks[gid]; save(); fire(); },
+    async allKicks(gid) { return Object.values(data.kicks[gid] || {}); },
+    async load() {
+      let old = null; try { old = JSON.parse(localStorage.getItem("kickoutarc.local") || "null"); } catch (e) {}
+      try { await IDB.open(); useIdb = true; data = (await IDB.get("data")) || old || data; } catch (e) { data = old || data; }
+      if (useIdb && old && !(await IDB.get("data").catch(() => null))) save();
+      fire();
+    },
+    dump() { return JSON.parse(JSON.stringify(data)); },
+    async restore(obj, replace) {
+      if (replace) data = { games: {}, kicks: {} };
+      Object.assign(data.games, obj.games || {});
+      for (const [gid, ks] of Object.entries(obj.kicks || {})) data.kicks[gid] = Object.assign(data.kicks[gid] || {}, ks);
+      save(); fire();
+    },
+  };
+})();
+function saveFile(name, text, type) {
+  const url = URL.createObjectURL(new Blob([text], { type: type || "text/csv" }));
+  const a = document.createElement("a"); a.href = url; a.download = name; document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 4000);
+}
+
+function dbStore(db) {
+  const onErr = e => { if (!dbErrShown) { dbErrShown = true; showBanner("Couldn't reach saved kickouts (" + e.code + "). Reload the page to try again."); } };
+  const kicksCol = gid => db.collection("games/" + gid + "/kickouts");
+  return {
+    watchGames(cb) { return db.collection("games").onSnapshot(s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), onErr); },
+    watchKicks(gid, cb) { return kicksCol(gid).onSnapshot(s => cb(s.docs.map(d => ({ id: d.id, ...d.data() }))), onErr); },
+    async saveGame(g) { const { id, ...body } = g; await db.doc("games/" + id).set(body); },
+    async saveKick(gid, k) { const { id, ...body } = k; await kicksCol(gid).doc(id).set(body); },
+    async deleteKick(gid, id) { await kicksCol(gid).doc(id).delete(); },
+    async deleteGame(gid) {
+      const s = await kicksCol(gid).get();
+      for (const d of s.docs) await kicksCol(gid).doc(d.id).delete();
+      await db.doc("games/" + gid).delete();
+    },
+    async allKicks(gid) { const s = await kicksCol(gid).get(); return s.docs.map(d => ({ id: d.id, ...d.data() })); },
+  };
+}
+
+/* ---------- state ---------- */
+let games = [], gameId = "", kicks = [], unsubKicks = null, editingId = null, downloads = null;
+const form = { team: "home", half: "1", len: "", contest: "", out: "", after: "", press: "", shape: "", wind: "", windAuto: true, nKick: null, nOpp: null, result: "", pts: "", x: null, y: null, lenAuto: true };
+const lenFor = y => y <= prefs.shortLine ? "Short" : y <= prefs.medLine ? "Medium" : "Long";
+const CONLAB = { Clean: "Clean catch", Break: "Contested break", Sideline: "Sideline", Free: "Free" };
+function autoWind(side, half) {
+  const g = game(); if (!g || !g.windFavours) return "";
+  if (g.windStrength === "Calm") return "Calm";
+  if (g.windFavours === "across") return "Across";
+  if (Number(half) === 3) return "";
+  const favH1 = g.windFavours, fav = Number(half) === 1 ? favH1 : (favH1 === "home" ? "away" : "home");
+  return side === fav ? "With" : "Into";
+}
+function applyAutoWind() { if (form.windAuto) form.wind = autoWind(form.team, form.half); }
+const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+const game = () => games.find(g => g.id === gameId);
+const teamName = side => { const g = game(); return g ? (side === "home" ? g.home : g.away) : side; };
+
+function showBanner(msg) { const b = $("banner"); b.textContent = msg; b.hidden = !msg; }
+let toastT; function toast(msg) { const t = $("toast"); t.textContent = msg; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 1800); }
+
+/* ---------- pitches ---------- */
+const tagP = pitchSVG($("tagPitch"));
+function svgPoint(svg, g, evt) {
+  const pt = svg.createSVGPoint(); pt.x = evt.clientX; pt.y = evt.clientY;
+  return pt.matrixTransform(g.getScreenCTM().inverse());
+}
+$("tagPitch").addEventListener("click", e => {
+  if (!gameId) return;
+  const p = svgPoint($("tagPitch"), tagP.g, e);
+  form.x = Math.max(0, Math.min(W, Math.round(p.x * 10) / 10));
+  form.y = Math.max(0, Math.min(L, Math.round(p.y * 10) / 10));
+  if (form.lenAuto || !form.len) { form.len = lenFor(form.y); form.lenAuto = true; }
+  syncForm(); drawTag();
+});
+
+function dotsFor(list, target, cur) {
+  const ns = "http://www.w3.org/2000/svg";
+  target.innerHTML = "";
+  list.forEach(k => {
+    if (k.x == null || k.y == null) return;
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("cx", k.x); c.setAttribute("cy", k.y); c.setAttribute("r", k.id === editingId ? 1.9 : 1.4);
+    c.setAttribute("fill", k.outcome === "Won" ? "#3fbf6f" : "#e0563f");
+    c.setAttribute("stroke", k.id === editingId ? "#e2b153" : "rgba(0,0,0,.55)"); c.setAttribute("stroke-width", k.id === editingId ? ".6" : ".3");
+    const t = document.createElementNS(ns, "title");
+    t.textContent = `${teamName(k.team)} · ${k.length || "?"} · ${CONLAB[k.contest] || "?"} · ${k.outcome || "?"}${k.wonBy ? " · " + k.wonBy : ""}${k.nDiff != null ? " · " + k.nKick + "v" + k.nOpp : ""}${k.press ? " · " + k.press + (k.shape ? " " + k.shape : "") : ""}${k.wind ? " · wind " + k.wind.toLowerCase() : ""}`;
+    c.appendChild(t); target.appendChild(c);
+  });
+  if (cur && cur.x != null) {
+    const c = document.createElementNS(ns, "circle");
+    c.setAttribute("cx", cur.x); c.setAttribute("cy", cur.y); c.setAttribute("r", 2.1);
+    c.setAttribute("fill", "#e2b153"); c.setAttribute("stroke", "#0b2426"); c.setAttribute("stroke-width", ".5");
+    target.appendChild(c);
+    const ring = document.createElementNS(ns, "circle");
+    ring.setAttribute("cx", cur.x); ring.setAttribute("cy", cur.y); ring.setAttribute("r", 3.6);
+    ring.setAttribute("fill", "none"); ring.setAttribute("stroke", "#e2b153"); ring.setAttribute("stroke-width", ".35");
+    target.appendChild(ring);
+  }
+}
+function drawTag() {
+  const mine = kicks.filter(k => k.team === form.team);
+  $("pitchTitle").textContent = gameId ? `${teamName(form.team)} kickouts (${mine.length})` : "Kickouts";
+  dotsFor(mine, tagP.dots, form);
+}
+
+/* ---------- form ---------- */
+function bindSeg(id, key, after) {
+  $(id).addEventListener("click", e => {
+    const b = e.target.closest("button[data-v]"); if (!b) return;
+    form[key] = form[key] === b.dataset.v && !["team", "half"].includes(key) ? "" : b.dataset.v;
+    if (key === "len") form.lenAuto = false;
+    if (key === "wind") form.windAuto = false;
+    if (key === "team" || key === "half") applyAutoWind();
+    after && after(); syncForm(); drawTag();
+  });
+}
+["segHalf:half", "segLen:len", "segContest:contest", "segOut:out", "segAfter:after", "segPress:press", "segShape:shape", "segWind:wind", "segResult:result", "segPts:pts"]
+  .forEach(s => { const [id, key] = s.split(":"); bindSeg(id, key); });
+bindSeg("segTeam", "team", renderPlayers);
+
+document.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click", () => {
+  const key = b.dataset.step, d = Number(b.dataset.d);
+  const cur = form[key] == null ? (d > 0 ? 0 : 1) : form[key];
+  form[key] = Math.max(0, Math.min(15, cur + d)); syncForm();
+}));
+function syncForm() {
+  const g = game();
+  $("segTeam").innerHTML = g ? ["home", "away"].map(s => `<button type="button" data-v="${s}">${esc(s === "home" ? g.home : g.away)}</button>`).join("") : "";
+  const map = { segTeam: "team", segHalf: "half", segLen: "len", segContest: "contest", segOut: "out", segAfter: "after", segPress: "press", segShape: "shape", segWind: "wind", segResult: "result", segPts: "pts" };
+  Object.entries(map).forEach(([id, k]) => $(id).querySelectorAll("button[data-v]").forEach(b => b.setAttribute("aria-pressed", String(b.dataset.v === form[k]))));
+  $("ptsField").hidden = form.result !== "Score";
+  $("formField").hidden = form.press !== "Zonal";
+  $("shapeOther").hidden = !(form.press === "Zonal" && form.shape === "other");
+  $("nKick").textContent = form.nKick ?? "–"; $("nOpp").textContent = form.nOpp ?? "–";
+  const g2 = game(); const kt = g2 ? (form.team === "home" ? g2.home : g2.away) : "Kicking team", ot = g2 ? (form.team === "home" ? g2.away : g2.home) : "Opposition";
+  $("nKickLab").textContent = kt; $("nOppLab").textContent = ot;
+  const d = form.nKick != null && form.nOpp != null ? form.nKick - form.nOpp : null;
+  $("nDiff").textContent = d == null ? "–" : d > 0 ? "+" + d : d === 0 ? "=" : String(d);
+  $("nDiff").className = "diff" + (d == null ? "" : d > 0 ? " p" : d < 0 ? " m" : " e");
+  const gw = game();
+  $("windHint").textContent = !gw || !gw.windFavours ? "Set the wind on the game (Game > Edit this game) and this fills itself in."
+    : form.windAuto ? (form.wind ? `Auto: ${form.wind.toLowerCase()} the wind (${(gw.windStrength || "").toLowerCase() || "set"}). Tap to override.` : "Extra time: pick the wind for this kickout.")
+    : "Set by hand for this kickout.";
+  if (form.x != null) { const q = geo(form.x, form.y); $("readout").textContent = `${form.y.toFixed(0)}m out · ${q.side.toLowerCase()} · ${q.dist.toFixed(0)}m from goal`; }
+  else $("readout").textContent = "Click the pitch where the ball was won";
+  $("formTitle").textContent = editingId ? "Edit kickout" : "Add kickout";
+  $("saveBtn").innerHTML = editingId ? "Save changes <kbd>Enter</kbd>" : "Add kickout <kbd>Enter</kbd>";
+}
+function clearForm(keepContext = true) {
+  const keep = keepContext ? { team: form.team, half: form.half, press: form.press, shape: form.shape } : { team: "home", half: "1", press: "", shape: "" };
+  Object.assign(form, { len: "", contest: "", out: "", after: "", result: "", pts: "", x: null, y: null, lenAuto: true, nKick: null, nOpp: null, windAuto: true }, keep);
+  applyAutoWind();
+  $("wonBy").value = ""; $("speed").value = ""; $("notes").value = ""; $("formErr").textContent = "";
+  editingId = null; syncForm(); drawTag(); renderList();
+}
+$("clearBtn").addEventListener("click", () => clearForm());
+
+$("koForm").addEventListener("submit", async e => {
+  e.preventDefault();
+  if (!gameId) { $("formErr").textContent = "Create or pick a game first."; return; }
+  const miss = [];
+  if (form.x == null) miss.push("click where it landed");
+  if (!form.len) miss.push("length");
+  if (!form.contest) miss.push("how it was won");
+  if (!form.out) miss.push("won or lost");
+  if (miss.length) { $("formErr").textContent = "Still needed: " + miss.join(", ") + "."; return; }
+  const q = geo(form.x, form.y);
+  const prev = editingId ? kicks.find(k => k.id === editingId) : null;
+  const k = {
+    id: editingId || newId(), team: form.team, half: Number(form.half), time: $("vtime").value.trim(),
+    length: form.len, contest: form.contest, outcome: form.out, wonBy: $("wonBy").value.trim(),
+    after: form.after, speed: $("speed").value === "" ? null : Number($("speed").value),
+    press: form.press, shape: form.press === "Zonal" ? (form.shape === "other" ? $("shapeOther").value.trim() : form.shape) : "",
+    wind: form.wind, nKick: form.nKick, nOpp: form.nOpp, nDiff: form.nKick != null && form.nOpp != null ? form.nKick - form.nOpp : null,
+    result: form.result, points: form.result === "Score" ? Number(form.pts || 1) : 0, notes: $("notes").value.trim(),
+    x: form.x, y: form.y, dist: q.dist, band: q.band, side: q.side, zone: q.zone,
+    seq: prev ? prev.seq : (kicks.reduce((m, k) => Math.max(m, k.seq || 0), 0) + 1),
+    createdAt: prev ? prev.createdAt : new Date().toISOString(),
+  };
+  const wasEdit = !!editingId;
+  $("saveBtn").disabled = true;
+  try { await store.saveKick(gameId, k); toast(wasEdit ? "Kickout updated" : `Kickout ${k.seq} added`); clearForm(); }
+  catch (err) { $("formErr").textContent = err && err.code === "quota_exceeded" ? "Storage is full — export and delete an old game." : "Couldn't save (" + (err && err.code || "error") + "). Try again."; }
+  finally { $("saveBtn").disabled = false; }
+});
+
+function loadForEdit(id) {
+  const k = kicks.find(x => x.id === id); if (!k) return;
+  editingId = id;
+  const presets = ["4-4-3", "3-4-4", "4-3-4", "3-5-3", "5-3-3"];
+  Object.assign(form, { team: k.team, half: String(k.half || 1), len: k.length || "", contest: k.contest || "", out: k.outcome || "",
+    after: k.after || "", press: k.press || "", shape: k.shape ? (presets.includes(k.shape) ? k.shape : "other") : "", wind: k.wind || "", windAuto: false,
+    nKick: k.nKick ?? null, nOpp: k.nOpp ?? null, result: k.result || "", pts: k.points ? String(k.points) : "", x: k.x, y: k.y, lenAuto: false });
+  $("shapeOther").value = k.shape && !presets.includes(k.shape) ? k.shape : "";
+  $("vtime").value = k.time || ""; $("wonBy").value = k.wonBy || ""; $("speed").value = k.speed ?? ""; $("notes").value = k.notes || "";
+  if (k.after || k.result || k.notes || k.speed != null) $("moreBox").open = true;
+  switchView("tag"); syncForm(); drawTag(); renderList();
+}
+
+/* keyboard */
+document.addEventListener("keydown", e => {
+  if (e.target.closest("input,textarea,select") || e.metaKey || e.ctrlKey || e.altKey || document.querySelector(".scrim")) return;
+  if (currentView !== "tag" || !gameId) return;
+  const k = e.key.toLowerCase(), set = (key, v) => { form[key] = v; if (key === "len") form.lenAuto = false; syncForm(); drawTag(); e.preventDefault(); };
+  if (k === "t") { form.team = form.team === "home" ? "away" : "home"; applyAutoWind(); syncForm(); drawTag(); renderPlayers(); e.preventDefault(); }
+  else if (["1", "2", "3"].includes(k)) { form.half = k; applyAutoWind(); syncForm(); e.preventDefault(); }
+  else if (k === "s") set("len", "Short"); else if (k === "m") set("len", "Medium"); else if (k === "l") set("len", "Long");
+  else if (k === "c") set("contest", "Clean"); else if (k === "b") set("contest", "Break");
+  else if (k === "x") set("contest", "Sideline"); else if (k === "f") set("contest", "Free");
+  else if (k === "y") set("out", "Won"); else if (k === "n") set("out", "Lost");
+  else if (k === "escape") { clearForm(); e.preventDefault(); }
+  else if (k === "enter") { $("koForm").requestSubmit(); e.preventDefault(); }
+});
+
+function renderPlayers() {
+  const names = [...new Set(kicks.filter(k => (k.outcome === "Won" ? k.team : (k.team === "home" ? "away" : "home")) === form.team || true).map(k => k.wonBy).filter(Boolean))].sort();
+  $("playerList").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
+}
+
+/* ---------- stats ---------- */
+const pct = (a, b) => b ? Math.round(100 * a / b) : null;
+const pill = p => p == null ? `<span class="pill n">–</span>` : `<span class="pill ${p >= 75 ? "g" : p >= 60 ? "a" : "r"}">${p}%</span>`;
+function teamStats(list) {
+  const n = list.length, won = list.filter(k => k.outcome === "Won").length;
+  const by = len => { const l = list.filter(k => k.length === len); return [l.filter(k => k.outcome === "Won").length, l.length]; };
+  const con = {}; ["Clean", "Break", "Sideline", "Free"].forEach(c => {
+    const l = list.filter(k => k.contest === c); con[c] = [l.filter(k => k.outcome === "Won").length, l.filter(k => k.outcome === "Lost").length]; });
+  const scored = list.filter(k => k.outcome === "Won" && k.result === "Score").reduce((s, k) => s + (k.points || 0), 0);
+  const conceded = list.filter(k => k.outcome === "Lost" && k.result === "Score").reduce((s, k) => s + (k.points || 0), 0);
+  const tagged = list.filter(k => k.result).length;
+  const grp = (key, vals) => vals.map(v => { const l = list.filter(k => key(k) === v); return [v, l.filter(k => k.outcome === "Won").length, l.length]; }).filter(r => r[2]);
+  const press = grp(k => k.press, ["Man-to-man", "Zonal", "Dropped off"]);
+  const shapes = grp(k => k.press === "Zonal" ? (k.shape || "Zonal (no shape)") : null, [...new Set(list.filter(k => k.press === "Zonal").map(k => k.shape || "Zonal (no shape)"))]);
+  const nums = grp(k => k.nDiff == null ? null : k.nDiff > 0 ? "Plus" : k.nDiff < 0 ? "Minus" : "Level", ["Plus", "Level", "Minus"]);
+  const wind = grp(k => k.wind || null, ["With", "Into", "Across", "Calm"]);
+  return { n, won, short: by("Short"), medium: by("Medium"), long: by("Long"), con, scored, conceded, tagged, press, shapes, nums, wind };
+}
+function statBlock(s) {
+  return `<div class="statgrid">
+    <span>Total</span><span>${s.won}/${s.n}</span>${pill(pct(s.won, s.n))}
+    <span>Short</span><span>${s.short[0]}/${s.short[1]}</span>${pill(pct(...s.short))}
+    <span>Medium</span><span>${s.medium[0]}/${s.medium[1]}</span>${pill(pct(...s.medium))}
+    <span>Long</span><span>${s.long[0]}/${s.long[1]}</span>${pill(pct(...s.long))}
+  </div>`;
+}
+function conTable(s) {
+  return `<table class="ztable"><thead><tr><th>How won</th><th>Kicking team</th><th>Opposition</th></tr></thead><tbody>${
+    ["Clean", "Break", "Sideline", "Free"].map(c => `<tr><td>${CONLAB[c]}</td><td><span class="w">${s.con[c][0]}</span></td><td><span class="l">${s.con[c][1]}</span></td></tr>`).join("")}</tbody></table>`;
+}
+function renderTallies() {
+  if (!gameId) { $("tallies").innerHTML = ""; return; }
+  $("tallies").innerHTML = ["home", "away"].map(side => {
+    const s = teamStats(kicks.filter(k => k.team === side));
+    return `<div class="tally"><h3><span>${esc(teamName(side))} kickouts</span><span class="hint">${s.n} tagged</span></h3>${statBlock(s)}</div>`;
+  }).join("");
+}
+
+/* ---------- maps view ---------- */
+async function renderMaps() {
+  const box = $("maps");
+  if (!gameId && $("fScope").value === "game") { box.innerHTML = `<div class="empty">Pick a game to see its kickout maps.</div>`; return; }
+  const f = l => l.filter(k => (!$("fHalf").value || String(k.half) === $("fHalf").value) && (!$("fLen").value || k.length === $("fLen").value) && (!$("fCon").value || k.contest === $("fCon").value)
+    && (!$("fPress").value || k.press === $("fPress").value) && (!$("fWind").value || k.wind === $("fWind").value)
+    && (!$("fPlayer").value || (k.wonBy || "").trim() === $("fPlayer").value));
+  let groups = [];
+  if ($("fScope").value === "game") {
+    groups = ["home", "away"].map(side => { const all = kicks.filter(k => k.team === side); return { title: teamName(side) + " kickouts", all, list: f(all) }; });
+  } else {
+    box.innerHTML = `<div class="empty">Loading every game…</div>`;
+    const byTeam = new Map();
+    for (const g of games) {
+      const ks = gameId === g.id ? kicks : await store.allKicks(g.id);
+      ks.forEach(k => { const t = k.team === "home" ? g.home : g.away; if (!byTeam.has(t)) byTeam.set(t, []); byTeam.get(t).push(k); });
+    }
+    groups = [...byTeam.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([t, l]) => ({ title: `${t} kickouts (all games)`, all: l, list: f(l) }));
+    if (!groups.length) { box.innerHTML = `<div class="empty">No kickouts tagged yet.</div>`; return; }
+  }
+  // player dropdown: everyone who won a kickout in these games (either team)
+  const allNames = [...new Set(groups.flatMap(gr => gr.all || []).map(k => (k.wonBy || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const pSel = $("fPlayer"), pCur = pSel.value;
+  pSel.innerHTML = `<option value="">All players</option>` + allNames.map(n => `<option${n === pCur ? " selected" : ""}>${esc(n)}</option>`).join("");
+  if (pCur && !allNames.includes(pCur)) pSel.value = "";
+  groups.forEach(gr => gr.list = f(gr.all));
+  box.innerHTML = groups.map((gr, i) => {
+    const s = teamStats(gr.list);
+    const who = {}; gr.list.forEach(k => { const n = (k.wonBy || "").trim(); if (!n) return;
+      who[n] ||= { n, kept: 0, lost: 0, clean: 0, brk: 0 }; if (k.outcome === "Won") who[n].kept++; else who[n].lost++;
+      if (k.contest === "Clean") who[n].clean++; if (k.contest === "Break") who[n].brk++; });
+    const wrows = Object.values(who).sort((a, b) => (b.kept + b.lost) - (a.kept + a.lost)).map(w =>
+      `<tr><td>${esc(w.n)}</td><td>${w.kept ? `<span class="w">${w.kept}</span>` : ""}</td><td>${w.lost ? `<span class="l">${w.lost}</span>` : ""}</td><td>${w.clean}</td><td>${w.brk}</td></tr>`).join("");
+    const wtable = wrows ? `<table class="ztable"><thead><tr><th>Won by</th><th>For us</th><th>For them</th><th>Clean</th><th>Breaks</th></tr></thead><tbody>${wrows}</tbody></table>` : "";
+    const zones = {}; gr.list.forEach(k => { const z = k.band || "?"; zones[z] ||= [0, 0]; zones[z][1]++; if (k.outcome === "Won") zones[z][0]++; });
+    const zrows = ["Up to 45m", "45–65m", "65m–half", "Opp half"].filter(z => zones[z]).map(z => `<tr><td>${z}</td><td>${zones[z][0]}/${zones[z][1]}</td><td>${pill(pct(...zones[z]))}</td></tr>`).join("");
+    const net = s.tagged ? `<p class="hint" style="margin:6px 0 0">Points off these kickouts: <b style="color:var(--won)">${s.scored} scored</b> · <b style="color:var(--lost)">${s.conceded} conceded</b> · net ${s.scored - s.conceded >= 0 ? "+" : ""}${s.scored - s.conceded} (from ${s.tagged} with a result tagged)</p>` : "";
+    return `<div class="mapcard"><h3>${esc(gr.title)}</h3>
+      <div><svg class="pitch" id="mp${i}" viewBox="-4 -4 93 148" role="img" aria-label="${esc(gr.title)} map"></svg>
+        <div class="legend" style="margin-top:6px"><span><i class="dot" style="background:var(--won)"></i>Won</span><span><i class="dot" style="background:var(--lost)"></i>Lost</span></div></div>
+      <div style="display:flex;flex-direction:column;gap:12px;min-width:0"><div><span class="big">${s.n}</span> <span class="hint">kickouts</span></div>${statBlock(s)}${conTable(s)}
+        ${zrows ? `<table class="ztable"><thead><tr><th>Where won</th><th>Kept</th><th></th></tr></thead><tbody>${zrows}</tbody></table>` : ""}
+        ${splitTable("Numbers at the drop", s.nums.map(r => [r[0] === "Plus" ? "Plus (+)" : r[0] === "Minus" ? "Minus (−)" : "Level (=)", r[1], r[2]]))}
+        ${splitTable("Opposition press", s.press)}${splitTable("Zonal shape", s.shapes)}${splitTable("Wind", s.wind.map(r => [r[0] === "With" || r[0] === "Into" ? r[0] + " the wind" : r[0], r[1], r[2]]))}${wtable}${net}</div></div>`;
+  }).join("");
+  groups.forEach((gr, i) => { const p = pitchSVG($("mp" + i)); dotsFor(gr.list, p.dots, null); });
+}
+["fHalf", "fLen", "fCon", "fPress", "fWind", "fPlayer", "fScope"].forEach(id => $(id).addEventListener("change", renderMaps));
+
+function splitTable(title, rows) {
+  if (!rows.length) return "";
+  return `<table class="ztable"><thead><tr><th>${esc(title)}</th><th>Kept</th><th></th></tr></thead><tbody>${rows.map(r => `<tr><td>${esc(r[0])}</td><td>${r[1]}/${r[2]}</td><td>${pill(pct(r[1], r[2]))}</td></tr>`).join("")}</tbody></table>`;
+}
+/* ---------- list view ---------- */
+function renderList() {
+  const rows = [...kicks].sort((a, b) => (a.seq || 0) - (b.seq || 0));
+  $("listBody").innerHTML = rows.length ? rows.map(k => `<tr class="${k.id === editingId ? "editing" : ""}">
+    <td>${k.seq || ""}</td><td>${esc(teamName(k.team))}</td><td>${k.half === 3 ? "ET" : k.half}</td><td>${esc(k.time)}</td><td>${esc(k.length)}</td><td>${esc(CONLAB[k.contest] || k.contest)}</td>
+    <td><span class="${k.outcome === "Won" ? "w" : "l"}">${esc(k.outcome)}</span></td><td>${esc(k.wonBy)}</td><td>${esc(k.zone)}</td><td>${k.dist != null ? Math.round(k.dist) + "m" : ""}</td>
+    <td>${k.nDiff == null ? "" : `${k.nKick}v${k.nOpp} (${k.nDiff > 0 ? "+" + k.nDiff : k.nDiff === 0 ? "=" : k.nDiff})`}</td><td>${esc(k.press)}${k.shape ? " " + esc(k.shape) : ""}</td><td>${esc(k.wind)}</td><td>${esc(k.result)}${k.result === "Score" ? " (" + (k.points === 3 ? "goal" : k.points) + ")" : ""}</td>
+    <td><button class="iconbtn" data-edit="${k.id}" type="button">Edit</button> <button class="iconbtn" data-del="${k.id}" type="button">Delete</button></td></tr>`).join("")
+    : `<tr><td colspan="15" class="hint">No kickouts tagged for this game yet.</td></tr>`;
+}
+$("listBody").addEventListener("click", e => {
+  const ed = e.target.closest("[data-edit]"), del = e.target.closest("[data-del]");
+  if (ed) loadForEdit(ed.dataset.edit);
+  if (del) confirmBox("Delete this kickout?", "It's removed from the game straight away.", "Delete", async () => { await store.deleteKick(gameId, del.dataset.del); toast("Kickout deleted"); });
+});
+
+/* ---------- modals ---------- */
+function modal(html) { $("modalRoot").innerHTML = `<div class="scrim"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; return $("modalRoot").querySelector(".modal"); }
+function closeModal() { $("modalRoot").innerHTML = ""; }
+function confirmBox(title, text, okLabel, onOk) {
+  const m = modal(`<h3>${esc(title)}</h3><p class="hint" style="margin:0">${esc(text)}</p><div class="actions"><button class="btn" data-x>Cancel</button><button class="btn danger" data-ok>${esc(okLabel)}</button></div>`);
+  m.querySelector("[data-x]").onclick = closeModal;
+  m.querySelector("[data-ok]").onclick = async () => { closeModal(); try { await onOk(); } catch (err) { toast("Couldn't do that (" + (err && err.code || "error") + ")"); } };
+}
+$("newGameBtn").addEventListener("click", () => openGameForm());
+function openGameForm(g) {
+  const m = modal(`<h3>${g ? "Edit game" : "New game"}</h3>
+    <div class="row2"><div class="field"><label for="gHome">Home team</label><input type="text" id="gHome" value="${esc(g?.home)}"></div>
+    <div class="field"><label for="gAway">Away team</label><input type="text" id="gAway" value="${esc(g?.away)}"></div></div>
+    <div class="row2"><div class="field"><label for="gDate">Date</label><input type="date" id="gDate" value="${esc(g?.date || new Date().toISOString().slice(0, 10))}"></div>
+    <div class="field"><label for="gComp">Competition</label><input type="text" id="gComp" value="${esc(g?.competition || "")}" placeholder="e.g. Kerry SFC"></div></div>
+    <div class="row2"><div class="field"><label for="gVenue">Venue</label><input type="text" id="gVenue" value="${esc(g?.venue || "")}" placeholder="e.g. Fitzgerald Stadium"></div>
+    <div class="field"><label for="gTime">Throw-in</label><input type="text" id="gTime" value="${esc(g?.throwIn || "")}" placeholder="e.g. 15:30"></div></div>
+    <div class="field"><span class="lab">Wind strength</span><div class="seg" id="gStr">${["Calm", "Light", "Moderate", "Strong", "Gale"].map(v => `<button type="button" data-v="${v}" aria-pressed="${g?.windStrength === v}">${v}</button>`).join("")}</div></div>
+    <div class="row2"><div class="field"><label for="gKmh">Wind speed (km/h, optional)</label><input type="number" id="gKmh" min="0" max="120" value="${esc(g?.windKmh ?? "")}"></div>
+    <div class="field"><label for="gFav">Wind favours in the 1st half</label><select id="gFav"><option value="">Not set</option><option value="home">Home team</option><option value="away">Away team</option><option value="across">Across the pitch</option></select></div></div>
+    <div class="row2"><div class="field"><label for="gShort">Short up to (m)</label><input type="number" id="gShort" value="${prefs.shortLine}" min="20" max="70"></div>
+    <div class="field"><label for="gMed">Medium up to (m)</label><input type="number" id="gMed" value="${prefs.medLine}" min="30" max="100"></div></div>
+    <span class="hint">Length lines apply to all games on this device. "Wind favours" = the team kicking with the wind in the 1st half; it swaps for the 2nd half automatically.</span>
+    <div class="err" id="gErr"></div>
+    <div class="actions">${g ? `<button class="btn danger" data-delgame type="button">Delete game</button>` : ""}<button class="btn" data-x type="button">Cancel</button><button class="btn primary" data-ok type="button">${g ? "Save" : "Create game"}</button></div>`);
+  m.querySelector("[data-x]").onclick = closeModal;
+  $("gFav").value = g?.windFavours || "";
+  let gStr = g?.windStrength || "";
+  $("gStr").addEventListener("click", e => { const b = e.target.closest("button[data-v]"); if (!b) return; gStr = gStr === b.dataset.v ? "" : b.dataset.v;
+    $("gStr").querySelectorAll("button").forEach(x => x.setAttribute("aria-pressed", String(x.dataset.v === gStr))); });
+  if (g) m.querySelector("[data-delgame]").onclick = () => confirmBox(`Delete ${g.home} v ${g.away}?`, "This removes the game and every kickout tagged in it. Export it first if you want a copy.", "Delete game", async () => {
+    await store.deleteGame(g.id); if (gameId === g.id) selectGame(""); toast("Game deleted"); });
+  m.querySelector("[data-ok]").onclick = async () => {
+    const home = $("gHome").value.trim(), away = $("gAway").value.trim();
+    if (!home || !away) { $("gErr").textContent = "Enter both team names."; return; }
+    const sl = Number($("gShort").value), ml = Number($("gMed").value);
+    if (sl >= 20 && sl <= 70 && ml > sl && ml <= 100) { prefs.shortLine = sl; prefs.medLine = ml; try { localStorage.setItem(LS_KEY, JSON.stringify(prefs)); } catch (e) {} $("shortLineTxt").textContent = sl; $("medLineTxt").textContent = ml; }
+    const rec = { id: g?.id || newId(), home, away, date: $("gDate").value, competition: $("gComp").value.trim(), venue: $("gVenue").value.trim(), throwIn: $("gTime").value.trim(),
+      windStrength: gStr, windKmh: $("gKmh").value === "" ? null : Number($("gKmh").value), windFavours: $("gFav").value, createdAt: g?.createdAt || new Date().toISOString() };
+    try { await store.saveGame(rec); closeModal(); selectGame(rec.id); form.windAuto = true; applyAutoWind(); syncForm(); toast(g ? "Game saved" : "Game created"); }
+    catch (err) { $("gErr").textContent = "Couldn't save (" + (err && err.code || "error") + ")."; }
+  };
+  setTimeout(() => $("gHome").focus(), 30);
+}
+
+/* ---------- export / import ---------- */
+const COLS = ["GameId", "GameDate", "Competition", "HomeTeam", "AwayTeam", "KickingTeam", "Opponent", "Seq", "Half", "VideoTime", "Length", "Contest", "Outcome", "Won", "WonBy",
+  "KickNumbers", "OppNumbers", "NumbersDiff", "PressType", "ZonalShape", "Wind", "WindStrength", "Venue",
+  "After", "RestartSecs", "PossessionResult", "Points", "X_m", "Y_m", "DistFromGoal_m", "DepthBand", "Side", "Zone", "Notes"];
+const csvCell = v => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
+function rowsFor(g, ks) {
+  return [...ks].sort((a, b) => (a.seq || 0) - (b.seq || 0)).map(k => {
+    const kt = k.team === "home" ? g.home : g.away, op = k.team === "home" ? g.away : g.home;
+    return [g.id, g.date, g.competition, g.home, g.away, kt, op, k.seq, k.half, k.time, k.length, k.contest, k.outcome, k.outcome === "Won" ? 1 : 0, k.wonBy,
+      k.nKick, k.nOpp, k.nDiff, k.press, k.shape, k.wind, g.windStrength, g.venue,
+      k.after, k.speed, k.result, k.points, k.x, k.y, k.dist, k.band, k.side, k.zone, k.notes].map(csvCell).join(",");
+  });
+}
+$("exportBtn").addEventListener("click", () => {
+  const m = modal(`<h3>Export kickouts</h3><p class="hint" style="margin:0">A CSV with one row per kickout, ready for the Data Hub.</p>
+    <div class="actions"><button class="btn" data-one ${gameId ? "" : "disabled"}>This game</button><button class="btn teal" data-all>All games</button></div>
+    <div class="actions"><button class="btn" data-x>Close</button></div><textarea id="csvOut" rows="6" hidden readonly></textarea><p class="hint" id="csvHint" hidden>Downloads aren't available here, so the CSV is above: select all, copy, and paste it into a .csv file.</p>`);
+  m.querySelector("[data-x]").onclick = closeModal;
+  const go = async all => {
+    const lines = [COLS.join(",")];
+    const list = all ? games : [game()];
+    for (const g of list) lines.push(...rowsFor(g, g.id === gameId ? kicks : await store.allKicks(g.id)));
+    const csv = lines.join("\n") + "\n";
+    const name = all ? "kickouts_all_games.csv" : `kickouts_${(game().home + "_v_" + game().away).replace(/[^A-Za-z0-9_]+/g, "_")}.csv`;
+    saveFile(name, csv); closeModal(); toast("Saved " + name + " to Downloads");
+  };
+  m.querySelector("[data-one]").onclick = () => go(false);
+  m.querySelector("[data-all]").onclick = () => go(true);
+});
+$("importBtn").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  const text = await f.text();
+  const parse = t => { const out = []; let row = [], cell = "", q = false;
+    for (let i = 0; i < t.length; i++) { const c = t[i];
+      if (q) { if (c === '"' && t[i + 1] === '"') { cell += '"'; i++; } else if (c === '"') q = false; else cell += c; }
+      else if (c === '"') q = true; else if (c === ",") { row.push(cell); cell = ""; } else if (c === "\n" || c === "\r") { if (c === "\r" && t[i + 1] === "\n") i++; row.push(cell); out.push(row); row = []; cell = ""; } else cell += c; }
+    if (cell || row.length) { row.push(cell); out.push(row); } return out.filter(r => r.some(x => x !== "")); };
+  const rows = parse(text); if (rows.length < 2) { toast("That file has no rows"); return; }
+  const h = rows[0].map(s => s.trim()), ix = n => h.indexOf(n);
+  if (ix("KickingTeam") < 0 || ix("X_m") < 0) { toast("Not a KickoutArc CSV (needs KickingTeam and X_m columns)"); return; }
+  const byGame = new Map();
+  rows.slice(1).forEach(r => { const v = n => ix(n) >= 0 ? r[ix(n)] : "";
+    const gid = v("GameId") || (v("HomeTeam") + "_" + v("AwayTeam") + "_" + v("GameDate")).replace(/[^A-Za-z0-9_-]+/g, "_");
+    if (!byGame.has(gid)) byGame.set(gid, { g: { id: gid, home: v("HomeTeam"), away: v("AwayTeam"), date: v("GameDate"), competition: v("Competition"), wind: "", createdAt: new Date().toISOString() }, ks: [] });
+    const G = byGame.get(gid).g, x = Number(v("X_m")), y = Number(v("Y_m")), q = geo(x, y);
+    byGame.get(gid).ks.push({ id: newId(), team: v("KickingTeam") === G.away ? "away" : "home", seq: Number(v("Seq")) || byGame.get(gid).ks.length + 1, half: Number(v("Half")) || 1,
+      time: v("VideoTime"), length: v("Length"), contest: v("Contest"), outcome: v("Outcome") || (v("Won") === "1" ? "Won" : "Lost"), wonBy: v("WonBy"), after: v("After"),
+      speed: v("RestartSecs") === "" ? null : Number(v("RestartSecs")), result: v("PossessionResult"), points: Number(v("Points")) || 0, notes: v("Notes"),
+      nKick: v("KickNumbers") === "" ? null : Number(v("KickNumbers")), nOpp: v("OppNumbers") === "" ? null : Number(v("OppNumbers")),
+      nDiff: v("NumbersDiff") === "" ? null : Number(v("NumbersDiff")), press: v("PressType"), shape: v("ZonalShape"), wind: v("Wind"),
+      x, y, dist: q.dist, band: q.band, side: q.side, zone: q.zone, createdAt: new Date().toISOString() });
+  });
+  const m = modal(`<h3>Import ${rows.length - 1} kickouts?</h3><p class="hint" style="margin:0">${[...byGame.values()].map(o => esc(o.g.home + " v " + o.g.away) + " (" + o.ks.length + ")").join(" · ")}. Games already here with the same id get these kickouts added.</p>
+    <div class="actions"><button class="btn" data-x>Cancel</button><button class="btn primary" data-ok>Import</button></div><div class="hint" id="impProg"></div>`);
+  m.querySelector("[data-x]").onclick = closeModal;
+  m.querySelector("[data-ok]").onclick = async () => {
+    m.querySelector("[data-ok]").disabled = true; let n = 0;
+    try { for (const { g, ks } of byGame.values()) { if (!games.find(x => x.id === g.id)) await store.saveGame(g);
+        for (const k of ks) { await store.saveKick(g.id, k); n++; $("impProg").textContent = `${n} saved…`; } }
+      closeModal(); selectGame([...byGame.keys()][0]); toast(`Imported ${n} kickouts`); }
+    catch (err) { $("impProg").textContent = `Stopped after ${n}: ${err && err.code || "error"}.`; }
+  };
+});
+
+/* ---------- views & games ---------- */
+let currentView = "tag";
+function switchView(v) {
+  currentView = v;
+  document.querySelectorAll("nav.tabs button").forEach(b => b.setAttribute("aria-selected", String(b.dataset.view === v)));
+  ["games", "tag", "maps", "list"].forEach(x => $("view-" + x).hidden = x !== v);
+  if (v === "maps") renderMaps();
+  if (v === "games") renderGamesTable();
+  try { history.replaceState(null, "", "#" + v); } catch (e) {}
+}
+document.querySelector("nav.tabs").addEventListener("click", e => { const b = e.target.closest("button[data-view]"); if (b) switchView(b.dataset.view); });
+
+async function renderGamesTable() {
+  if (!store) return;
+  const q = ($("gSearch").value || "").trim().toLowerCase();
+  const sorted = [...games].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)))
+    .filter(g => !q || [g.home, g.away, g.competition, g.venue].join(" ").toLowerCase().includes(q));
+  const rows = [];
+  for (const g of sorted) {
+    const ks = g.id === gameId ? kicks : await store.allKicks(g.id);
+    const kp = side => { const l = ks.filter(k => k.team === side); return l.length ? pill(pct(l.filter(k => k.outcome === "Won").length, l.length)) + ` <span class="hint">${l.filter(k => k.outcome === "Won").length}/${l.length}</span>` : `<span class="hint">–</span>`; };
+    rows.push(`<tr data-open="${g.id}" class="${g.id === gameId ? "cur" : ""}"><td>${esc(g.date || "")}</td><td>${esc(g.competition || "")}</td><td><b>${esc(g.home)}</b></td>
+      <td class="c">${ks.length}</td><td class="c">${kp("home")}</td><td><b>${esc(g.away)}</b></td><td class="c">${kp("away")}</td>
+      <td><button class="iconbtn" data-gopen="${g.id}" type="button">Open</button> <button class="iconbtn" data-gedit="${g.id}" type="button">Edit</button> <button class="iconbtn" data-gdel="${g.id}" type="button">Delete</button></td></tr>`);
+  }
+  $("gBody").innerHTML = rows.join("") || `<tr><td colspan="8" class="hint">${games.length ? "No games match that search." : "No games yet. Click <b>+ Add game</b> to start."}</td></tr>`;
+}
+$("gSearch").addEventListener("input", renderGamesTable);
+$("gAdd").addEventListener("click", () => openGameForm());
+$("gBody").addEventListener("click", e => {
+  const ed = e.target.closest("[data-gedit]"), del = e.target.closest("[data-gdel]"), row = e.target.closest("[data-open]");
+  if (ed) { const g = games.find(x => x.id === ed.dataset.gedit); if (g) { selectGame(g.id); openGameForm(g); } return; }
+  if (del) { const g = games.find(x => x.id === del.dataset.gdel);
+    confirmBox(`Delete ${g ? g.home + " v " + g.away : "this game"}?`, "The game and all its kickouts are removed from this browser.", "Delete game",
+      async () => { await store.deleteGame(del.dataset.gdel); if (gameId === del.dataset.gdel) selectGame(""); toast("Game deleted"); renderGamesTable(); }); return; }
+  if (row) { selectGame(row.dataset.open); switchView("tag"); }
+});
+$("gBackup").addEventListener("click", () => {
+  const d = local.dump(), n = Object.values(d.kicks).reduce((s, k) => s + Object.keys(k).length, 0);
+  saveFile(`kickoutarc_backup_${new Date().toISOString().slice(0, 10)}.json`, JSON.stringify({ app: "KickoutArc", version: 1, saved: new Date().toISOString(), ...d }), "application/json");
+  toast(`Backed up ${Object.keys(d.games).length} games, ${n} kickouts`);
+});
+$("gRestore").addEventListener("click", () => $("gRestoreFile").click());
+$("gRestoreFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; e.target.value = ""; if (!f) return;
+  let obj; try { obj = JSON.parse(await f.text()); } catch (err) { toast("That isn't a KickoutArc backup"); return; }
+  if (!obj || obj.app !== "KickoutArc" || !obj.games) { toast("That isn't a KickoutArc backup"); return; }
+  const ng = Object.keys(obj.games).length, nk = Object.values(obj.kicks || {}).reduce((s, k) => s + Object.keys(k).length, 0);
+  const m = modal(`<h3>Restore ${ng} games (${nk} kickouts)?</h3><p class="hint" style="margin:0">Backup from ${esc((obj.saved || "").slice(0, 10))}. <b>Add</b> keeps what's here and adds the backup (same games are updated). <b>Replace</b> wipes this browser's games first.</p>
+    <div class="actions"><button class="btn" data-x>Cancel</button><button class="btn danger" data-rep>Replace</button><button class="btn primary" data-add>Add</button></div>`);
+  m.querySelector("[data-x]").onclick = closeModal;
+  const go = async replace => { await local.restore(obj, replace); closeModal(); toast(`Restored ${ng} games`); renderGamesTable(); };
+  m.querySelector("[data-add]").onclick = () => go(false);
+  m.querySelector("[data-rep]").onclick = () => go(true);
+});
+
+function renderGames() {
+  const sorted = [...games].sort((a, b) => String(b.date).localeCompare(String(a.date)) || String(b.createdAt).localeCompare(String(a.createdAt)));
+  $("gameSel").innerHTML = sorted.length ? sorted.map(g => `<option value="${g.id}" ${g.id === gameId ? "selected" : ""}>${esc(g.home)} v ${esc(g.away)}${g.date ? " · " + esc(g.date) : ""}</option>`).join("")
+    + `<option value="__edit">Edit this game…</option>` : `<option value="">No games yet</option>`;
+  $("noGame").hidden = !!gameId; $("tagMain").hidden = !gameId;
+  if (currentView === "games") renderGamesTable();
+}
+$("gameSel").addEventListener("change", e => {
+  if (e.target.value === "__edit") { e.target.value = gameId; if (game()) openGameForm(game()); return; }
+  selectGame(e.target.value);
+});
+function selectGame(id) {
+  gameId = id; editingId = null;
+  try { localStorage.setItem("kickoutarc.lastGame", id); } catch (e) {}
+  if (unsubKicks) { unsubKicks(); unsubKicks = null; }
+  kicks = [];
+  if (id && store) unsubKicks = store.watchKicks(id, list => { kicks = list; drawTag(); renderTallies(); renderList(); renderPlayers(); if (currentView === "maps") renderMaps(); if (currentView === "games") renderGamesTable(); });
+  form.windAuto = true; applyAutoWind();
+  renderGames(); syncForm(); drawTag(); renderTallies(); renderList();
+  if (currentView === "maps") renderMaps();
+}
+
+function start(s) {
+  store = s;
+  store.watchGames(list => {
+    games = list;
+    if (!gameId || !games.find(g => g.id === gameId)) {
+      let last = ""; try { last = localStorage.getItem("kickoutarc.lastGame") || ""; } catch (e) {}
+      const pick = games.find(g => g.id === last) || [...games].sort((a, b) => String(b.date).localeCompare(String(a.date)))[0];
+      selectGame(pick ? pick.id : "");
+    } else { renderGames(); if (form.windAuto) { applyAutoWind(); syncForm(); } }
+  });
+}
+
+/* boot */
+renderGames(); syncForm(); drawTag();
+const hash = (location.hash || "").slice(1);
+switchView(["games", "tag", "maps", "list"].includes(hash) ? hash : "games");
+(async () => {
+  try { await local.load(); } catch (e) { showBanner("Couldn't open this browser's storage. Kickouts may not be kept: check the browser isn't in private mode."); }
+  isLocal = true; start(local);
+  if (currentView === "games") renderGamesTable();
+  try { if (navigator.storage && navigator.storage.persist) navigator.storage.persist(); } catch (e) {}
+  if ("serviceWorker" in navigator && location.protocol.startsWith("http")) navigator.serviceWorker.register("sw.js").catch(() => {});
+})();
+})();
+</script>

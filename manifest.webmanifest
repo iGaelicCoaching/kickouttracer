@@ -1,0 +1,14 @@
+{
+  "name": "KickoutArc · iGaelicCoach",
+  "short_name": "KickoutArc",
+  "description": "Tag kickouts from match video: where won, length, clean or break, player, numbers, press, wind.",
+  "start_url": "./#games",
+  "scope": "./",
+  "display": "standalone",
+  "background_color": "#0b2426",
+  "theme_color": "#0b2426",
+  "icons": [
+    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}
