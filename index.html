@@ -202,7 +202,11 @@ td .w{color:var(--won);font-weight:700}td .l{color:var(--lost);font-weight:700}
           <button type="button" data-v="Clean">Clean catch</button><button type="button" data-v="Break">Contested break</button><button type="button" data-v="Sideline">Sideline</button><button type="button" data-v="Free">Free</button></div></div>
         <div class="field"><span class="lab">Outcome for kicking team <span><kbd>Y</kbd><kbd>N</kbd></span></span><div class="seg outcome" id="segOut">
           <button type="button" data-v="Won">Won</button><button type="button" data-v="Lost">Lost</button></div></div>
-        <div class="field"><label for="wonBy">Won by (player)</label><input type="text" id="wonBy" list="playerList" placeholder="e.g. Ryan O'Donoghue"><datalist id="playerList"></datalist></div>
+        <div class="row2">
+          <div class="field"><label for="contestBy">Contested by · <span id="cbKick">kicking team</span></label><input type="text" id="contestBy" list="playerList" placeholder="who went for it"></div>
+          <div class="field"><label for="contestOpp">Contested by · <span id="cbOpp">opposition</span></label><input type="text" id="contestOpp" list="playerList" placeholder="optional"></div>
+        </div>
+        <div class="field"><label for="wonBy">Won by (player who came away with it)</label><input type="text" id="wonBy" list="playerList" placeholder="e.g. Ryan O'Donoghue"><datalist id="playerList"></datalist></div>
         <div class="field"><span class="lab">Numbers at the drop zone</span>
           <div class="steppers">
             <div class="stepper"><span class="sl" id="nKickLab">Kicking team</span><div class="ctl"><button type="button" data-step="nKick" data-d="-1" aria-label="One fewer">&minus;</button><output id="nKick">–</output><button type="button" data-step="nKick" data-d="1" aria-label="One more">+</button></div></div>
@@ -252,7 +256,7 @@ td .w{color:var(--won);font-weight:700}td .l{color:var(--lost);font-weight:700}
       <label class="hint" for="fCon">How won</label><select id="fCon"><option value="">All</option><option value="Clean">Clean catch</option><option value="Break">Contested break</option><option>Sideline</option><option>Free</option></select>
       <label class="hint" for="fPress">Press</label><select id="fPress"><option value="">All</option><option>Man-to-man</option><option>Zonal</option><option>Dropped off</option></select>
       <label class="hint" for="fWind">Wind</label><select id="fWind"><option value="">All</option><option>With</option><option>Into</option><option>Across</option><option>Calm</option></select>
-      <label class="hint" for="fPlayer">Won by</label><select id="fPlayer"><option value="">All players</option></select>
+      <label class="hint" for="fPlayer">Player</label><select id="fPlayer"><option value="">All players</option></select>
       <label class="hint" for="fScope">Games</label><select id="fScope"><option value="game">This game</option><option value="all">All games (by team)</option></select>
     </div>
     <div class="maps" id="maps"></div>
@@ -261,7 +265,7 @@ td .w{color:var(--won);font-weight:700}td .l{color:var(--lost);font-weight:700}
   <!-- LIST -->
   <section id="view-list" hidden>
     <div class="tablewrap"><table><thead><tr>
-      <th>#</th><th>Team</th><th>Half</th><th>Time</th><th>Length</th><th>How won</th><th>Outcome</th><th>Won by</th><th>Zone</th><th>Dist</th><th>Numbers</th><th>Press</th><th>Wind</th><th>Result</th><th></th></tr></thead>
+      <th>#</th><th>Team</th><th>Half</th><th>Time</th><th>Length</th><th>How won</th><th>Outcome</th><th>Contested by</th><th>Won by</th><th>Zone</th><th>Dist</th><th>Numbers</th><th>Press</th><th>Wind</th><th>Result</th><th></th></tr></thead>
       <tbody id="listBody"></tbody></table></div>
   </section>
 </div>
@@ -442,7 +446,7 @@ function dotsFor(list, target, cur) {
     c.setAttribute("fill", k.outcome === "Won" ? "#3fbf6f" : "#e0563f");
     c.setAttribute("stroke", k.id === editingId ? "#e2b153" : "rgba(0,0,0,.55)"); c.setAttribute("stroke-width", k.id === editingId ? ".6" : ".3");
     const t = document.createElementNS(ns, "title");
-    t.textContent = `${teamName(k.team)} · ${k.length || "?"} · ${CONLAB[k.contest] || "?"} · ${k.outcome || "?"}${k.wonBy ? " · " + k.wonBy : ""}${k.nDiff != null ? " · " + k.nKick + "v" + k.nOpp : ""}${k.press ? " · " + k.press + (k.shape ? " " + k.shape : "") : ""}${k.wind ? " · wind " + k.wind.toLowerCase() : ""}`;
+    t.textContent = `${teamName(k.team)} · ${k.length || "?"} · ${CONLAB[k.contest] || "?"} · ${k.outcome || "?"}${k.contestBy ? " · contested " + k.contestBy + (k.contestOpp ? " v " + k.contestOpp : "") : ""}${k.wonBy ? " · won by " + k.wonBy : ""}${k.nDiff != null ? " · " + k.nKick + "v" + k.nOpp : ""}${k.press ? " · " + k.press + (k.shape ? " " + k.shape : "") : ""}${k.wind ? " · wind " + k.wind.toLowerCase() : ""}`;
     c.appendChild(t); target.appendChild(c);
   });
   if (cur && cur.x != null) {
@@ -483,6 +487,7 @@ document.querySelectorAll("[data-step]").forEach(b => b.addEventListener("click"
   form[key] = Math.max(0, Math.min(15, cur + d)); syncForm();
 }));
 function syncForm() {
+  try { $("cbKick").textContent = teamName(form.team); $("cbOpp").textContent = teamName(form.team === "home" ? "away" : "home"); } catch (e) {}
   const g = game();
   $("segTeam").innerHTML = g ? ["home", "away"].map(s => `<button type="button" data-v="${s}">${esc(s === "home" ? g.home : g.away)}</button>`).join("") : "";
   const map = { segTeam: "team", segHalf: "half", segLen: "len", segContest: "contest", segOut: "out", segAfter: "after", segPress: "press", segShape: "shape", segWind: "wind", segResult: "result", segPts: "pts" };
@@ -509,7 +514,7 @@ function clearForm(keepContext = true) {
   const keep = keepContext ? { team: form.team, half: form.half, press: form.press, shape: form.shape } : { team: "home", half: "1", press: "", shape: "" };
   Object.assign(form, { len: "", contest: "", out: "", after: "", result: "", pts: "", x: null, y: null, lenAuto: true, nKick: null, nOpp: null, windAuto: true }, keep);
   applyAutoWind();
-  $("wonBy").value = ""; $("speed").value = ""; $("notes").value = ""; $("formErr").textContent = "";
+  $("wonBy").value = ""; $("contestBy").value = ""; $("contestOpp").value = ""; $("speed").value = ""; $("notes").value = ""; $("formErr").textContent = "";
   editingId = null; syncForm(); drawTag(); renderList();
 }
 $("clearBtn").addEventListener("click", () => clearForm());
@@ -527,7 +532,7 @@ $("koForm").addEventListener("submit", async e => {
   const prev = editingId ? kicks.find(k => k.id === editingId) : null;
   const k = {
     id: editingId || newId(), team: form.team, half: Number(form.half), time: $("vtime").value.trim(),
-    length: form.len, contest: form.contest, outcome: form.out, wonBy: $("wonBy").value.trim(),
+    length: form.len, contest: form.contest, outcome: form.out, wonBy: $("wonBy").value.trim(), contestBy: $("contestBy").value.trim(), contestOpp: $("contestOpp").value.trim(),
     after: form.after, speed: $("speed").value === "" ? null : Number($("speed").value),
     press: form.press, shape: form.press === "Zonal" ? (form.shape === "other" ? $("shapeOther").value.trim() : form.shape) : "",
     wind: form.wind, nKick: form.nKick, nOpp: form.nOpp, nDiff: form.nKick != null && form.nOpp != null ? form.nKick - form.nOpp : null,
@@ -551,7 +556,7 @@ function loadForEdit(id) {
     after: k.after || "", press: k.press || "", shape: k.shape ? (presets.includes(k.shape) ? k.shape : "other") : "", wind: k.wind || "", windAuto: false,
     nKick: k.nKick ?? null, nOpp: k.nOpp ?? null, result: k.result || "", pts: k.points ? String(k.points) : "", x: k.x, y: k.y, lenAuto: false });
   $("shapeOther").value = k.shape && !presets.includes(k.shape) ? k.shape : "";
-  $("vtime").value = k.time || ""; $("wonBy").value = k.wonBy || ""; $("speed").value = k.speed ?? ""; $("notes").value = k.notes || "";
+  $("vtime").value = k.time || ""; $("wonBy").value = k.wonBy || ""; $("contestBy").value = k.contestBy || ""; $("contestOpp").value = k.contestOpp || ""; $("speed").value = k.speed ?? ""; $("notes").value = k.notes || "";
   if (k.after || k.result || k.notes || k.speed != null) $("moreBox").open = true;
   switchView("tag"); syncForm(); drawTag(); renderList();
 }
@@ -572,7 +577,8 @@ document.addEventListener("keydown", e => {
 });
 
 function renderPlayers() {
-  const names = [...new Set(kicks.filter(k => (k.outcome === "Won" ? k.team : (k.team === "home" ? "away" : "home")) === form.team || true).map(k => k.wonBy).filter(Boolean))].sort();
+  const names = [...new Set(kicks.filter(k => (k.outcome === "Won" ? k.team : (k.team === "home" ? "away" : "home")) === form.team || true).flatMap(k => [k.wonBy, k.contestBy, k.contestOpp]).filter(Boolean))].sort();
+  try { $("cbKick").textContent = teamName(form.team); $("cbOpp").textContent = teamName(form.team === "home" ? "away" : "home"); } catch (e) {}
   $("playerList").innerHTML = names.map(n => `<option value="${esc(n)}">`).join("");
 }
 
@@ -620,7 +626,7 @@ async function renderMaps() {
   if (!gameId && $("fScope").value === "game") { box.innerHTML = `<div class="empty">Pick a game to see its kickout maps.</div>`; return; }
   const f = l => l.filter(k => (!$("fHalf").value || String(k.half) === $("fHalf").value) && (!$("fLen").value || k.length === $("fLen").value) && (!$("fCon").value || k.contest === $("fCon").value)
     && (!$("fPress").value || k.press === $("fPress").value) && (!$("fWind").value || k.wind === $("fWind").value)
-    && (!$("fPlayer").value || (k.wonBy || "").trim() === $("fPlayer").value));
+    && (!$("fPlayer").value || [k.wonBy, k.contestBy, k.contestOpp].some(n => (n || "").trim() === $("fPlayer").value)));
   let groups = [];
   if ($("fScope").value === "game") {
     groups = ["home", "away"].map(side => { const all = kicks.filter(k => k.team === side); return { title: teamName(side) + " kickouts", all, list: f(all) }; });
@@ -635,7 +641,7 @@ async function renderMaps() {
     if (!groups.length) { box.innerHTML = `<div class="empty">No kickouts tagged yet.</div>`; return; }
   }
   // player dropdown: everyone who won a kickout in these games (either team)
-  const allNames = [...new Set(groups.flatMap(gr => gr.all || []).map(k => (k.wonBy || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const allNames = [...new Set(groups.flatMap(gr => gr.all || []).flatMap(k => [k.wonBy, k.contestBy, k.contestOpp]).map(n => (n || "").trim()).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const pSel = $("fPlayer"), pCur = pSel.value;
   pSel.innerHTML = `<option value="">All players</option>` + allNames.map(n => `<option${n === pCur ? " selected" : ""}>${esc(n)}</option>`).join("");
   if (pCur && !allNames.includes(pCur)) pSel.value = "";
@@ -647,7 +653,14 @@ async function renderMaps() {
       if (k.contest === "Clean") who[n].clean++; if (k.contest === "Break") who[n].brk++; });
     const wrows = Object.values(who).sort((a, b) => (b.kept + b.lost) - (a.kept + a.lost)).map(w =>
       `<tr><td>${esc(w.n)}</td><td>${w.kept ? `<span class="w">${w.kept}</span>` : ""}</td><td>${w.lost ? `<span class="l">${w.lost}</span>` : ""}</td><td>${w.clean}</td><td>${w.brk}</td></tr>`).join("");
-    const wtable = wrows ? `<table class="ztable"><thead><tr><th>Won by</th><th>For us</th><th>For them</th><th>Clean</th><th>Breaks</th></tr></thead><tbody>${wrows}</tbody></table>` : "";
+    const con = {}; gr.list.forEach(k => [["contestBy", "Kick"], ["contestOpp", "Opp"]].forEach(([f, side]) => { const n = (k[f] || "").trim(); if (!n) return;
+      const key = side + "|" + n; con[key] ||= { n, side, c: 0, w: 0, bc: 0, bw: 0 };
+      const won = side === "Kick" ? k.outcome === "Won" : k.outcome === "Lost"; con[key].c++; if (won) con[key].w++;
+      if (k.contest === "Break") { con[key].bc++; if (won) con[key].bw++; } }));
+    const crows = Object.values(con).sort((a, b) => (a.side === b.side ? 0 : a.side === "Kick" ? -1 : 1) || b.c - a.c).map(c =>
+      `<tr><td>${esc(c.n)} <span class="hint">${c.side === "Kick" ? "" : "(opp)"}</span></td><td>${c.w}/${c.c}</td><td>${pill(pct(c.w, c.c))}</td><td>${c.bc ? c.bw + "/" + c.bc : "–"}</td></tr>`).join("");
+    const ctable = crows ? `<table class="ztable"><thead><tr><th>Contested by</th><th>Won for his team</th><th></th><th>Breaks</th></tr></thead><tbody>${crows}</tbody></table>` : "";
+    const wtable = ctable + (wrows ? `<table class="ztable"><thead><tr><th>Won by</th><th>For us</th><th>For them</th><th>Clean</th><th>Breaks</th></tr></thead><tbody>${wrows}</tbody></table>` : "");
     const zones = {}; gr.list.forEach(k => { const z = k.band || "?"; zones[z] ||= [0, 0]; zones[z][1]++; if (k.outcome === "Won") zones[z][0]++; });
     const zrows = ["Up to 45m", "45–65m", "65m–half", "Opp half"].filter(z => zones[z]).map(z => `<tr><td>${z}</td><td>${zones[z][0]}/${zones[z][1]}</td><td>${pill(pct(...zones[z]))}</td></tr>`).join("");
     const net = s.tagged ? `<p class="hint" style="margin:6px 0 0">Points off these kickouts: <b style="color:var(--won)">${s.scored} scored</b> · <b style="color:var(--lost)">${s.conceded} conceded</b> · net ${s.scored - s.conceded >= 0 ? "+" : ""}${s.scored - s.conceded} (from ${s.tagged} with a result tagged)</p>` : "";
@@ -672,10 +685,10 @@ function renderList() {
   const rows = [...kicks].sort((a, b) => (a.seq || 0) - (b.seq || 0));
   $("listBody").innerHTML = rows.length ? rows.map(k => `<tr class="${k.id === editingId ? "editing" : ""}">
     <td>${k.seq || ""}</td><td>${esc(teamName(k.team))}</td><td>${k.half === 3 ? "ET" : k.half}</td><td>${esc(k.time)}</td><td>${esc(k.length)}</td><td>${esc(CONLAB[k.contest] || k.contest)}</td>
-    <td><span class="${k.outcome === "Won" ? "w" : "l"}">${esc(k.outcome)}</span></td><td>${esc(k.wonBy)}</td><td>${esc(k.zone)}</td><td>${k.dist != null ? Math.round(k.dist) + "m" : ""}</td>
+    <td><span class="${k.outcome === "Won" ? "w" : "l"}">${esc(k.outcome)}</span></td><td>${esc(k.contestBy)}${k.contestOpp ? ` <span class="hint">v ${esc(k.contestOpp)}</span>` : ""}</td><td>${esc(k.wonBy)}</td><td>${esc(k.zone)}</td><td>${k.dist != null ? Math.round(k.dist) + "m" : ""}</td>
     <td>${k.nDiff == null ? "" : `${k.nKick}v${k.nOpp} (${k.nDiff > 0 ? "+" + k.nDiff : k.nDiff === 0 ? "=" : k.nDiff})`}</td><td>${esc(k.press)}${k.shape ? " " + esc(k.shape) : ""}</td><td>${esc(k.wind)}</td><td>${esc(k.result)}${k.result === "Score" ? " (" + (k.points === 3 ? "goal" : k.points) + ")" : ""}</td>
     <td><button class="iconbtn" data-edit="${k.id}" type="button">Edit</button> <button class="iconbtn" data-del="${k.id}" type="button">Delete</button></td></tr>`).join("")
-    : `<tr><td colspan="15" class="hint">No kickouts tagged for this game yet.</td></tr>`;
+    : `<tr><td colspan="16" class="hint">No kickouts tagged for this game yet.</td></tr>`;
 }
 $("listBody").addEventListener("click", e => {
   const ed = e.target.closest("[data-edit]"), del = e.target.closest("[data-del]");
@@ -731,14 +744,14 @@ function openGameForm(g) {
 /* ---------- export / import ---------- */
 const COLS = ["GameId", "GameDate", "Competition", "HomeTeam", "AwayTeam", "KickingTeam", "Opponent", "Seq", "Half", "VideoTime", "Length", "Contest", "Outcome", "Won", "WonBy",
   "KickNumbers", "OppNumbers", "NumbersDiff", "PressType", "ZonalShape", "Wind", "WindStrength", "Venue",
-  "After", "RestartSecs", "PossessionResult", "Points", "X_m", "Y_m", "DistFromGoal_m", "DepthBand", "Side", "Zone", "Notes"];
+  "After", "RestartSecs", "PossessionResult", "Points", "X_m", "Y_m", "DistFromGoal_m", "DepthBand", "Side", "Zone", "Notes", "ContestedBy", "ContestedByOpp"];
 const csvCell = v => { const s = v == null ? "" : String(v); return /[",\n]/.test(s) ? '"' + s.replace(/"/g, '""') + '"' : s; };
 function rowsFor(g, ks) {
   return [...ks].sort((a, b) => (a.seq || 0) - (b.seq || 0)).map(k => {
     const kt = k.team === "home" ? g.home : g.away, op = k.team === "home" ? g.away : g.home;
     return [g.id, g.date, g.competition, g.home, g.away, kt, op, k.seq, k.half, k.time, k.length, k.contest, k.outcome, k.outcome === "Won" ? 1 : 0, k.wonBy,
       k.nKick, k.nOpp, k.nDiff, k.press, k.shape, k.wind, g.windStrength, g.venue,
-      k.after, k.speed, k.result, k.points, k.x, k.y, k.dist, k.band, k.side, k.zone, k.notes].map(csvCell).join(",");
+      k.after, k.speed, k.result, k.points, k.x, k.y, k.dist, k.band, k.side, k.zone, k.notes, k.contestBy, k.contestOpp].map(csvCell).join(",");
   });
 }
 $("exportBtn").addEventListener("click", () => {
@@ -775,7 +788,7 @@ $("importFile").addEventListener("change", async e => {
     if (!byGame.has(gid)) byGame.set(gid, { g: { id: gid, home: v("HomeTeam"), away: v("AwayTeam"), date: v("GameDate"), competition: v("Competition"), wind: "", createdAt: new Date().toISOString() }, ks: [] });
     const G = byGame.get(gid).g, x = Number(v("X_m")), y = Number(v("Y_m")), q = geo(x, y);
     byGame.get(gid).ks.push({ id: newId(), team: v("KickingTeam") === G.away ? "away" : "home", seq: Number(v("Seq")) || byGame.get(gid).ks.length + 1, half: Number(v("Half")) || 1,
-      time: v("VideoTime"), length: v("Length"), contest: v("Contest"), outcome: v("Outcome") || (v("Won") === "1" ? "Won" : "Lost"), wonBy: v("WonBy"), after: v("After"),
+      time: v("VideoTime"), length: v("Length"), contest: v("Contest"), outcome: v("Outcome") || (v("Won") === "1" ? "Won" : "Lost"), wonBy: v("WonBy"), contestBy: v("ContestedBy"), contestOpp: v("ContestedByOpp"), after: v("After"),
       speed: v("RestartSecs") === "" ? null : Number(v("RestartSecs")), result: v("PossessionResult"), points: Number(v("Points")) || 0, notes: v("Notes"),
       nKick: v("KickNumbers") === "" ? null : Number(v("KickNumbers")), nOpp: v("OppNumbers") === "" ? null : Number(v("OppNumbers")),
       nDiff: v("NumbersDiff") === "" ? null : Number(v("NumbersDiff")), press: v("PressType"), shape: v("ZonalShape"), wind: v("Wind"),
